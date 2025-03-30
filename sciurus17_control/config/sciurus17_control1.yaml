@@ -33,7 +33,7 @@
     type: "position_controllers/GripperActionController"
     publish_rate: 500
     joint: r_hand_joint
-    action_monitor_rate: 10
+    action_monitor_rate: 100
     state_publish_rate:  100
     stall_velocity_threshold: 0.001
     goal_tolerance: 0.05

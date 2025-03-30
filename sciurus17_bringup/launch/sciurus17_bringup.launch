@@ -9,6 +9,14 @@
       <arg name="use_rviz" value="$(arg use_rviz)"/>
     </include>
 
-    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/realsense.launch" if="$(arg use_head_camera)"/>
+    <include ns="sciurus17" file="$(find sciurus17_vision)/launch/realsense.launch" if="$(arg use_head_camera)">
+      <arg name="color_fps" value="30"/>
+      <arg name="color_width" value="1280"/>
+      <arg name="color_height" value="720"/>
+      <rosparam>
+	/sciurus17/aligned_depth_to_color/image_raw/compressedDepth/png_level: 9
+	/sciurus17/camera/color/image_raw/compressed/png_level: 9
+      </rosparam>
+    </include>
     <include ns="sciurus17" file="$(find sciurus17_vision)/launch/chest_camera.launch" if="$(arg use_chest_camera)"/>
 </launch>

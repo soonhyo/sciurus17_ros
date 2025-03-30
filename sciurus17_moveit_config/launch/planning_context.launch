@@ -18,7 +18,8 @@
 
   <!-- Load default settings for kinematics; these settings are overridden by settings in a node's namespace -->
   <group ns="$(arg robot_description)_kinematics">
-    <rosparam command="load" file="$(find sciurus17_moveit_config)/config/kinematics.yaml"/>
+    <rosparam command="load" file="$(find sciurus17_moveit_config)/config/kinematics_tracik.yaml"/>
   </group>
+    <!-- <rosparam command="load" file="$(find sciurus17_moveit_config)/config/kinematics.yaml"/> -->
   
 </launch>
