@@ -821,6 +821,35 @@ void DXLPORT_CONTROL::set_param_drive_mode( uint8_t dxl_id, int val )
         }
     }
 }
+// void DXLPORT_CONTROL::set_param_ope_mode( uint8_t dxl_id, int val )
+// {
+//     uint8_t set_param = (uint8_t)val;
+
+//     if( !port_stat ){
+//         return;
+//     }
+//     for( int jj=0 ; jj<joint_num; ++jj ){
+//         if( dxl_id == joints[jj].get_dxl_id() ){
+//             ST_JOINT_PARAM new_param = joints[jj].get_joint_param();
+//             if( new_param.operation_mode != set_param ){
+//                 uint8_t dxl_error = 0; // Dynamixel error
+//                 lock_port();
+//                 int dxl_comm_result = packetHandler->write1ByteTxRx( portHandler, dxl_id, ADDR_OPE_MODE, set_param, &dxl_error );
+//                 unlock_port();
+//                 if( dxl_comm_result != COMM_SUCCESS ){
+//                     error_queue.push( (std::string(__func__) + " ") + packetHandler->getTxRxResult( dxl_comm_result ) );
+//                     ++tx_err;
+//                 }else if( dxl_error != 0 ){
+//                     error_queue.push( (std::string(__func__) + " ") + packetHandler->getRxPacketError( dxl_error ) );
+//                     ++tx_err;
+//                 }
+//             }
+//             new_param.operation_mode = set_param;
+//             joints[jj].set_joint_param( new_param );
+//             break;
+//         }
+//     }
+// }
 void DXLPORT_CONTROL::set_param_ope_mode( uint8_t dxl_id, int val )
 {
     uint8_t set_param = (uint8_t)val;
@@ -828,21 +857,44 @@ void DXLPORT_CONTROL::set_param_ope_mode( uint8_t dxl_id, int val )
     if( !port_stat ){
         return;
     }
+
     for( int jj=0 ; jj<joint_num; ++jj ){
         if( dxl_id == joints[jj].get_dxl_id() ){
             ST_JOINT_PARAM new_param = joints[jj].get_joint_param();
             if( new_param.operation_mode != set_param ){
                 uint8_t dxl_error = 0; // Dynamixel error
+                int dxl_comm_result;
+
                 lock_port();
-                int dxl_comm_result = packetHandler->write1ByteTxRx( portHandler, dxl_id, ADDR_OPE_MODE, set_param, &dxl_error );
-                unlock_port();
-                if( dxl_comm_result != COMM_SUCCESS ){
-                    error_queue.push( (std::string(__func__) + " ") + packetHandler->getTxRxResult( dxl_comm_result ) );
+
+                // Torque OFF
+                dxl_comm_result = packetHandler->write1ByteTxRx( portHandler, dxl_id, ADDR_TORQUE_ENABLE, 0, &dxl_error );
+                if( dxl_comm_result != COMM_SUCCESS || dxl_error != 0 ){
+                    unlock_port();
+                    error_queue.push( (std::string(__func__) + " Torque OFF Error: ") + packetHandler->getTxRxResult( dxl_comm_result ) );
                     ++tx_err;
-                }else if( dxl_error != 0 ){
-                    error_queue.push( (std::string(__func__) + " ") + packetHandler->getRxPacketError( dxl_error ) );
-                    ++tx_err;
+                    return;
                 }
+
+                // Operation Mode change
+                dxl_comm_result = packetHandler->write1ByteTxRx( portHandler, dxl_id, ADDR_OPE_MODE, set_param, &dxl_error );
+                if( dxl_comm_result != COMM_SUCCESS || dxl_error != 0 ){
+                    unlock_port();
+                    error_queue.push( (std::string(__func__) + " Operation Mode Change Error: ") + packetHandler->getTxRxResult( dxl_comm_result ) );
+                    ++tx_err;
+                    return;
+                }
+
+                // Torque ON
+                dxl_comm_result = packetHandler->write1ByteTxRx( portHandler, dxl_id, ADDR_TORQUE_ENABLE, 1, &dxl_error );
+                if( dxl_comm_result != COMM_SUCCESS || dxl_error != 0 ){
+                    unlock_port();
+                    error_queue.push( (std::string(__func__) + " Torque ON Error: ") + packetHandler->getTxRxResult( dxl_comm_result ) );
+                    ++tx_err;
+                    return;
+                }
+
+                unlock_port();
             }
             new_param.operation_mode = set_param;
             joints[jj].set_joint_param( new_param );
@@ -850,6 +902,7 @@ void DXLPORT_CONTROL::set_param_ope_mode( uint8_t dxl_id, int val )
         }
     }
 }
+
 void DXLPORT_CONTROL::set_param_home_offset( uint8_t dxl_id, int val )
 {
     uint32_t set_param = (uint32_t)val;
