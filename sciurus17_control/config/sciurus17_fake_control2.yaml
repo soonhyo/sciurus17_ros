@@ -28,7 +28,7 @@ left_hand_controller:
   action_ns: gripper_cmd
   publish_rate: 100
   joint: l_hand_joint
-  action_monitor_rate: 50
+  action_monitor_rate: 10
   state_publish_rate:  100
   stalled_velocity_threshold: 0.001
   goal_tolerance: 0.05

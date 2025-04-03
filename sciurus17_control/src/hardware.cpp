@@ -17,9 +17,9 @@
 #define REACTIVE_RATE_FUNCTION	//指示姿勢に変化がない場合に制御周期を落としてCPU負荷を下げる機能
 #ifdef REACTIVE_RATE_FUNCTION
 #define     CONTROL_WAIT_HZ   (50)
-#define     CONTROL_ACTIVE_HZ (200)
+#define     CONTROL_ACTIVE_HZ (100)
 #else
-#define     CONTROL_HZ   (200)
+#define     CONTROL_HZ   (100)
 #endif
 
 static std_msgs::String             lasterror_out;
