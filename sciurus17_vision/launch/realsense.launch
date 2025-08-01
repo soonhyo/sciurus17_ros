@@ -5,8 +5,8 @@
   <arg name="tf_prefix"                   default="$(arg camera)"/>
 
   <arg name="enable_pointcloud"           default="false"/>
-  <arg name="pointcloud_texture_stream"   default="RS2_STREAM_COLOR"/>
-  <arg name="pointcloud_texture_index"    default="0"/>
+  <!-- <arg name="pointcloud_texture_stream"   default="RS2_STREAM_COLOR"/> -->
+  <!-- <arg name="pointcloud_texture_index"    default="0"/> -->
   <arg name="enable_sync"                 default="false"/>
   <arg name="align_depth"                 default="true"/>
 
@@ -27,20 +27,20 @@
   <arg name="color_fps"                   default="30"/>
 
   <arg name="filters"                     default="pointcloud"/>
-  <arg name="clip_distance"               default="-1"/>
-  <arg name="initial_reset"               default="false"/>
+  <!-- <arg name="clip_distance"               default="-1"/> -->
+  <!-- <arg name="initial_reset"               default="false"/> -->
 
   <remap from="depth/color/points"        to="depth_registered/points"/>
 
-  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+  <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
     <arg name="serial_no"                 value="$(arg serial_no)"/>
     <arg name="json_file_path"            value="$(arg json_file_path)"/>
     <arg name="camera"                    value="$(arg camera)"/>
     <arg name="tf_prefix"                 value="$(arg tf_prefix)"/>
 
     <arg name="enable_pointcloud"         value="$(arg enable_pointcloud)"/>
-    <arg name="pointcloud_texture_stream" value="$(arg pointcloud_texture_stream)"/>
-    <arg name="pointcloud_texture_index"  value="$(arg pointcloud_texture_index)"/>
+    <!-- <arg name="pointcloud_texture_stream" value="$(arg pointcloud_texture_stream)"/> -->
+    <!-- <arg name="pointcloud_texture_index"  value="$(arg pointcloud_texture_index)"/> -->
     <arg name="enable_sync"               value="$(arg enable_sync)"/>
     <arg name="align_depth"               value="$(arg align_depth)"/>
 
@@ -61,8 +61,8 @@
     <arg name="color_fps"                 value="$(arg color_fps)"/>
 
     <arg name="filters"                   value="$(arg filters)"/>
-    <arg name="clip_distance"             value="$(arg clip_distance)"/>
-    <arg name="initial_reset"             value="$(arg initial_reset)"/>
+    <!-- <arg name="clip_distance"             value="$(arg clip_distance)"/> -->
+    <!-- <arg name="initial_reset"             value="$(arg initial_reset)"/> -->
 
     <arg name="enable_fisheye"            value="false"/>
     <arg name="enable_gyro"               value="false"/>

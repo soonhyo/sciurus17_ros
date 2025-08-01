@@ -1034,6 +1034,57 @@ void DXLPORT_CONTROL::set_param_vol_limit( uint8_t dxl_id, int max, int min )
         }
     }
 }
+// void DXLPORT_CONTROL::set_param_current_limit( uint8_t dxl_id, int val )
+// {
+//     uint16_t set_param = (uint16_t)val;
+
+//     if( !port_stat ){
+//         return;
+//     }
+//     for( int jj=0 ; jj<joint_num; ++jj ){
+//         if( dxl_id == joints[jj].get_dxl_id() ){
+//             ST_JOINT_PARAM new_param = joints[jj].get_joint_param();
+//             if (new_param.current_limit != set_param) {
+//                 uint8_t dxl_error = 0; // Dynamixel error
+//                 int dxl_comm_result;
+
+//                 lock_port();
+
+//                 // Torque OFF
+//                 dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 0, &dxl_error);
+//                 if (dxl_comm_result != COMM_SUCCESS || dxl_error != 0) {
+//                     unlock_port();
+//                     error_queue.push(std::string(__func__) + " Torque OFF Error: " + packetHandler->getTxRxResult(dxl_comm_result));
+//                     ++tx_err;
+//                     return;
+//                 }
+
+//                 // Current Limit
+//                 dxl_comm_result = packetHandler->write2ByteTxRx(portHandler, dxl_id, ADDR_CURRENT_LIMIT, set_param, &dxl_error);
+//                 if (dxl_comm_result != COMM_SUCCESS || dxl_error != 0) {
+//                     unlock_port();
+//                     error_queue.push(std::string(__func__) + " Current Limit Change Error: " + packetHandler->getTxRxResult(dxl_comm_result));
+//                     ++tx_err;
+//                     return;
+//                 }
+
+//                 // Torque ON
+//                 dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 1, &dxl_error);
+//                 if (dxl_comm_result != COMM_SUCCESS || dxl_error != 0) {
+//                     unlock_port();
+//                     error_queue.push(std::string(__func__) + " Torque ON Error: " + packetHandler->getTxRxResult(dxl_comm_result));
+//                     ++tx_err;
+//                     return;
+//                 }
+
+//                 unlock_port();
+//             }
+//             new_param.current_limit = set_param;
+//             joints[jj].set_joint_param( new_param );
+//             break;
+//         }
+//     }
+// }
 void DXLPORT_CONTROL::set_param_current_limit( uint8_t dxl_id, int val )
 {
     uint16_t set_param = (uint16_t)val;
@@ -1044,18 +1095,40 @@ void DXLPORT_CONTROL::set_param_current_limit( uint8_t dxl_id, int val )
     for( int jj=0 ; jj<joint_num; ++jj ){
         if( dxl_id == joints[jj].get_dxl_id() ){
             ST_JOINT_PARAM new_param = joints[jj].get_joint_param();
-            if( new_param.current_limit != set_param ){
+            if (new_param.current_limit != set_param) {
                 uint8_t dxl_error = 0; // Dynamixel error
+                int dxl_comm_result;
+
                 lock_port();
-                int dxl_comm_result = packetHandler->write2ByteTxRx( portHandler, dxl_id, ADDR_CURRENT_LIMIT, set_param, &dxl_error );
-                unlock_port();
-                if( dxl_comm_result != COMM_SUCCESS ){
-                    error_queue.push( (std::string(__func__) + " ") + packetHandler->getTxRxResult( dxl_comm_result ) );
+
+                // Torque OFF
+                dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 0, &dxl_error);
+                if (dxl_comm_result != COMM_SUCCESS || dxl_error != 0) {
+                    unlock_port();
+                    error_queue.push(std::string(__func__) + " Torque OFF Error: " + packetHandler->getTxRxResult(dxl_comm_result));
                     ++tx_err;
-                }else if( dxl_error != 0 ){
-                    error_queue.push( (std::string(__func__) + " ") + packetHandler->getRxPacketError( dxl_error ) );
-                    ++tx_err;
+                    return;
                 }
+
+                // Current Limit
+                dxl_comm_result = packetHandler->write2ByteTxRx(portHandler, dxl_id, ADDR_CURRENT_LIMIT, set_param, &dxl_error);
+                if (dxl_comm_result != COMM_SUCCESS || dxl_error != 0) {
+                    unlock_port();
+                    error_queue.push(std::string(__func__) + " Current Limit Change Error: " + packetHandler->getTxRxResult(dxl_comm_result));
+                    ++tx_err;
+                    return;
+                }
+
+                // Torque ON
+                dxl_comm_result = packetHandler->write1ByteTxRx(portHandler, dxl_id, ADDR_TORQUE_ENABLE, 1, &dxl_error);
+                if (dxl_comm_result != COMM_SUCCESS || dxl_error != 0) {
+                    unlock_port();
+                    error_queue.push(std::string(__func__) + " Torque ON Error: " + packetHandler->getTxRxResult(dxl_comm_result));
+                    ++tx_err;
+                    return;
+                }
+
+                unlock_port();
             }
             new_param.current_limit = set_param;
             joints[jj].set_joint_param( new_param );
