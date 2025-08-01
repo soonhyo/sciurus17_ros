@@ -24,6 +24,7 @@ generate_messages(
 
 generate_dynamic_reconfigure_options(
     cfg/ServoParameter.cfg
+    cfg/GravityCompensation.cfg
 )
 
 catkin_package(

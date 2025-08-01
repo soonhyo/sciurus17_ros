@@ -15,6 +15,7 @@
 #include    <sstream>
 #include    <queue>
 #include    <unistd.h>
+#include    <sciurus17_msgs/GravityCompensationConfig.h>
 
 /* ROS rate setting */
 #define REACTIVE_RATE_FUNCTION	//指示姿勢に変化がない場合に制御周期を落としてCPU負荷を下げる機能
@@ -31,7 +32,9 @@ static std::vector<ros::Publisher>  dxl_position_pub;
 static std::vector<ros::Publisher>  temp_pub;
 static std::vector<ros::Subscriber> gain_sub;
 typedef dynamic_reconfigure::Server<sciurus17_msgs::ServoParameterConfig> RECONFIG_TYPE;
+typedef dynamic_reconfigure::Server<sciurus17_msgs::GravityCompensationConfig> GRAVITY_RECONFIG_TYPE;
 static std::vector<std::unique_ptr<RECONFIG_TYPE>>  reconfig_srv;
+static std::unique_ptr<GRAVITY_RECONFIG_TYPE>      gravity_reconfig_srv;
 static DXLPORT_CONTROL*             driver_addr;
 
 typedef struct SET_GAIN_QUEUE
@@ -88,6 +91,21 @@ void gainCallback(const ros::MessageEvent<std_msgs::UInt16 const>& event)
         }
     }
 }
+void gravityCompensationCallback(sciurus17_msgs::GravityCompensationConfig &config, uint32_t level)
+{
+    if( driver_addr != nullptr ){
+        // Update gravity compensation settings in real-time
+        driver_addr->gravity_compensation_enabled_ = config.enable;
+        driver_addr->gravity_compensation_gain_ = config.gain;
+        
+        if( config.debug_output ){
+            ROS_INFO("Gravity Compensation: %s, Gain: %.3f", 
+                     config.enable ? "ENABLED" : "DISABLED", 
+                     config.gain);
+        }
+    }
+}
+
 void reconfigureCallback(sciurus17_msgs::ServoParameterConfig &config, uint32_t level, uint8_t id )
 {
     ST_JOINT_PARAM set_req_data;
@@ -259,6 +277,13 @@ int main( int argc, char* argv[] )
 
     ROS_INFO( "%s", sciurus17.self_check().c_str() );
     init_reconfigure( &sciurus17 );
+    
+    // Initialize gravity compensation dynamic reconfigure
+    ros::NodeHandle gravity_nh("~gravity_compensation");
+    gravity_reconfig_srv = std::make_unique<GRAVITY_RECONFIG_TYPE>(gravity_nh);
+    dynamic_reconfigure::Server<sciurus17_msgs::GravityCompensationConfig>::CallbackType gravity_callback;
+    gravity_callback = boost::bind(gravityCompensationCallback, _1, _2);
+    gravity_reconfig_srv->setCallback(gravity_callback);
 
 //    sciurus17.set_watchdog_all( DXL_WATCHDOG_RESET_VALUE );//Currentモードで使用する
     sciurus17.startup_motion();
