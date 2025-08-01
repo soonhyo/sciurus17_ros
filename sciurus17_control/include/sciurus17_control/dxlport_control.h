@@ -1,6 +1,11 @@
 #ifndef DXLPORT_CONTROL_H
 #define DXLPORT_CONTROL_H
 
+// Pinocchio includes for gravity compensation - must be first
+#include "pinocchio/fwd.hpp"
+#include "pinocchio/parsers/urdf.hpp"
+#include "pinocchio/algorithm/rnea.hpp"
+
 #include    <map>
 #include    <string>
 #include    <vector>
@@ -15,6 +20,7 @@
 #include    <sciurus17_control/control_setting.h>
 
 #include "device_mutex.h"
+#include <urdf/model.h>
 
 // Motion data
 typedef struct HOME_MOTION_DATA {
@@ -55,6 +61,10 @@ public:
     uint8_t             get_joint_num( void ){ return joint_num; }
     std::string         self_check( void );
     void                init_joint_params( ST_JOINT_PARAM &param, int table_id, int value );
+    
+    // Gravity compensation functions
+    bool                init_gravity_compensation( void );
+    void                compute_gravity_compensation( void );
 
     void                set_param_delay_time( uint8_t dxl_id, int val );
     void                set_param_drive_mode( uint8_t dxl_id, int val );
@@ -76,6 +86,13 @@ public:
 
     uint32_t                                    tempCount;
     std::vector<JOINT_CONTROL>                  joints;
+    
+    // Gravity compensation members
+    std::unique_ptr<pinocchio::Model>           pinocchio_model_;
+    std::unique_ptr<pinocchio::Data>            pinocchio_data_;
+    std::vector<double>                         gravity_torques_;
+    bool                                        gravity_compensation_enabled_;
+    double                                      gravity_compensation_gain_;
     
 private:
     uint8_t                                     joint_num;

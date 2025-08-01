@@ -1,3 +1,6 @@
+// Pinocchio includes for gravity compensation - must be first to avoid boost conflicts
+#include "pinocchio/fwd.hpp"
+
 #include    <signal.h>
 #include    <ros/ros.h>
 #include    <ros/console.h>

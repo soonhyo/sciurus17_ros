@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(sciurus17_control)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 find_package(catkin REQUIRED COMPONENTS
   controller_manager
@@ -12,17 +12,24 @@ find_package(catkin REQUIRED COMPONENTS
   transmission_interface
   sciurus17_msgs
   dynamic_reconfigure
+  urdf
 )
+
+find_package(Eigen3 REQUIRED)
+find_package(pinocchio REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp hardware_interface transmission_interface controller_manager dynamixel_sdk
+  CATKIN_DEPENDS roscpp hardware_interface transmission_interface controller_manager dynamixel_sdk urdf
+  DEPENDS Eigen3
 )
 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIR})
+  ${Boost_INCLUDE_DIR}
+  ${EIGEN3_INCLUDE_DIRS}
+)
 
 find_library( dxl_x64_cpp NAME libdxl_x64_cpp.so PATHS src/dynamixel_sdk/build/linux64 )
 
@@ -30,6 +37,7 @@ add_executable(sciurus17_control src/hardware.cpp src/joint_control.cpp src/dxlp
 
 target_link_libraries( sciurus17_control
   ${catkin_LIBRARIES}
+  pinocchio::pinocchio
 )
 set(MESSAGE_DEPENDS sciurus17_msgs_generate_messages)
 

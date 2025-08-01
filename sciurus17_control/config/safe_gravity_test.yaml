@@ -1,0 +1,11 @@
+# Safe testing parameters for gravity compensation
+# Start with these conservative values
+
+/sciurus17_control/gravity_compensation/enabled: false  # DISABLED by default
+/sciurus17_control/gravity_compensation/gain: 0.01      # Very low gain
+
+# Testing protocol:
+# 1. Start with enabled: false
+# 2. Monitor robot behavior with normal position control
+# 3. Only enable gravity compensation after confirming normal operation
+# 4. Gradually increase gain: 0.01 -> 0.05 -> 0.1 -> 0.2 (max)

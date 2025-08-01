@@ -1,3 +1,6 @@
+// Pinocchio includes for gravity compensation - must be first to avoid boost conflicts
+#include "pinocchio/fwd.hpp"
+
 #include    <ros/ros.h>
 #include    <ros/package.h>
 #include    <angles/angles.h>
@@ -25,6 +28,11 @@ DXLPORT_CONTROL::DXLPORT_CONTROL( ros::NodeHandle handle, CONTROL_SETTING &setti
     tx_err = rx_err = 0;
     tempCount = 0;
     tempTime = getTime();
+    
+    // Initialize gravity compensation
+    gravity_compensation_enabled_ = false;
+    gravity_compensation_gain_ = 1.0;
+    gravity_torques_.resize(0);
 
     portHandler      = NULL;
     writeGoalGroup   = NULL;
@@ -137,6 +145,13 @@ DXLPORT_CONTROL::DXLPORT_CONTROL( ros::NodeHandle handle, CONTROL_SETTING &setti
     }
     if( current_mode_joint_num > 0 ){
         registerInterface( &joint_eff_if );
+    }
+
+    // Initialize gravity compensation after successful hardware initialization
+    if( init_gravity_compensation() ){
+        ROS_INFO("Gravity compensation initialized successfully");
+    }else{
+        ROS_WARN("Failed to initialize gravity compensation - continuing without it");
     }
 
     init_stat = true;
@@ -295,6 +310,11 @@ void DXLPORT_CONTROL::write( ros::Time time, ros::Duration period )
         }
         return;
     }
+    
+    // Compute gravity compensation torques
+    if( gravity_compensation_enabled_ ){
+        compute_gravity_compensation();
+    }
 
     for( int jj=0 ; jj<joint_num ; ++jj ){
 #ifdef MASTER_WAIST_SLAVE_NECK
@@ -327,9 +347,18 @@ void DXLPORT_CONTROL::write( ros::Time time, ros::Duration period )
             goal_data[1] = (uint8_t)((dxl_cur&0x0000FF00)>>8);
             writeGoalGroup->changeParam( joints[jj].get_dxl_id(), ADDR_GOAL_CURRENT, LEN_GOAL_CURRENT, goal_data );
         }else{
-            // Position control
+            // Position control with gravity compensation
             double work_pos = RAD2DXLPOS( get_cmd );
             joints[jj].updt_d_command( get_cmd );
+            
+            // Add gravity compensation if enabled
+            if( gravity_compensation_enabled_ && jj < gravity_torques_.size() ){
+                // Convert gravity torque to position offset
+                // This is a simplified approach - in practice you might want more sophisticated integration
+                double gravity_compensation_offset = gravity_compensation_gain_ * gravity_torques_[jj] * 0.01; // Scale factor
+                work_pos += RAD2DXLPOS( gravity_compensation_offset );
+            }
+            
             work_pos += joints[jj].get_center();          // ROS(-180 <=> +180) => DXL(0 <=> 4095)
             if( work_pos < DXL_MIN_LIMIT ){
                 work_pos = DXL_MIN_LIMIT;
@@ -1289,4 +1318,70 @@ bool DXLPORT_CONTROL::setup_indirect( uint8_t dxl_id )
     }
 
     return true;
+}
+
+bool DXLPORT_CONTROL::init_gravity_compensation( void )
+{
+    try {
+        // Get robot description from parameter server
+        ros::NodeHandle nh;
+        std::string robot_description;
+        
+        if( !nh.getParam("/robot_description", robot_description) ){
+            ROS_ERROR("Failed to get robot_description parameter");
+            return false;
+        }
+        
+        // Load Pinocchio model from URDF string
+        pinocchio_model_ = std::make_unique<pinocchio::Model>();
+        pinocchio::urdf::buildModelFromXML(robot_description, *pinocchio_model_);
+        
+        // Create data structure
+        pinocchio_data_ = std::make_unique<pinocchio::Data>(*pinocchio_model_);
+        
+        // Initialize gravity torques vector
+        gravity_torques_.resize(joint_num, 0.0);
+        
+        // Read parameters
+        nh.param("/sciurus17_control/gravity_compensation/enabled", gravity_compensation_enabled_, false);
+        nh.param("/sciurus17_control/gravity_compensation/gain", gravity_compensation_gain_, 1.0);
+        
+        ROS_INFO("Pinocchio model loaded successfully. Model has %d DOF", pinocchio_model_->nq);
+        return true;
+        
+    } catch( const std::exception& e ) {
+        ROS_ERROR("Exception in init_gravity_compensation: %s", e.what());
+        return false;
+    }
+}
+
+void DXLPORT_CONTROL::compute_gravity_compensation( void )
+{
+    if( !pinocchio_model_ || !pinocchio_data_ ){
+        return;
+    }
+    
+    try {
+        // Build configuration vector from current joint positions
+        Eigen::VectorXd q = Eigen::VectorXd::Zero(pinocchio_model_->nq);
+        
+        // Map joint positions to Pinocchio model
+        // Assuming same order - this might need adjustment based on your URDF
+        for( int jj = 0; jj < std::min((int)joint_num, (int)pinocchio_model_->nq); ++jj ){
+            q[jj] = joints[jj].get_position();
+        }
+        
+        // Compute gravity compensation torques using RNEA with zero velocity and acceleration
+        Eigen::VectorXd v = Eigen::VectorXd::Zero(pinocchio_model_->nv);
+        Eigen::VectorXd a = Eigen::VectorXd::Zero(pinocchio_model_->nv);
+        pinocchio::rnea(*pinocchio_model_, *pinocchio_data_, q, v, a);
+        
+        // Extract gravity torques and store them (RNEA result is stored in tau)
+        for( int jj = 0; jj < std::min((int)joint_num, (int)pinocchio_data_->tau.size()); ++jj ){
+            gravity_torques_[jj] = pinocchio_data_->tau[jj];
+        }
+        
+    } catch( const std::exception& e ) {
+        ROS_ERROR_THROTTLE(1.0, "Exception in compute_gravity_compensation: %s", e.what());
+    }
 }
